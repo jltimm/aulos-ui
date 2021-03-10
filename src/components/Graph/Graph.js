@@ -1,62 +1,44 @@
-import React from "react";
-import VisGraph from "react-graph-vis";
+import React, {useRef, useCallback} from "react";
 import data from "../../data/data.json"
-
-const options = {
-  layout: {
-    hierarchical: false,
-    improvedLayout: false
-  },
-  edges: {
-    color: "#000000",
-    arrows: {
-      to: {
-        enabled: false
-      }
-    }
-  },
-  autoResize: true,
-  physics:{
-    enabled: true,
-    barnesHut: {
-      springConstant: 0,
-      avoidOverlap: 0.2
-    }
-}
-}
+import ForceGraph3D from 'react-force-graph-3d';
 
 const createNodesAndEdges = () => {
   var nodes = []
-  var edges = []
+  var links = []
   data.all_artists.forEach(item => {
-    nodes.push({ id: item.id, label: item.name, color: randomColor()})
+    nodes.push({ id: item.id, name: item.name, val: item.popularity / 10.0 })
     item.recommended.forEach(recommended => {
-      edges.push({ from: item.id, to: recommended })
+      links.push({ source: item.id, target: recommended })
     })
   })
   return {
     nodes: nodes,
-    edges: edges
+    links: links
   }
 }
 
-const events = {
-    select: (event) => {
-      var { nodes, edges } = event;
-    }
-  };
+export default function Graph(props) {
+  const fgRef = useRef();
 
-const randomColor = () => {
-  const red = Math.floor(Math.random() * 256).toString(16).padStart(2, '0');
-  const green = Math.floor(Math.random() * 256).toString(16).padStart(2, '0');
-  const blue = Math.floor(Math.random() * 256).toString(16).padStart(2, '0');
-  return `#${red}${green}${blue}`;
-}
+  const handleClick = useCallback(node => {
+    // Aim at node from outside it
+    const distance = 40;
+    const distRatio = 1 + distance/Math.hypot(node.x, node.y, node.z);
 
-export default function Graph() {
+    fgRef.current.cameraPosition(
+      { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio }, // new position
+      node, // lookAt ({ x, y, z })
+      3000  // ms transition duration
+    );
+  }, [fgRef]);
+
   return (
-    <div>
-        <VisGraph graph={createNodesAndEdges()} options={options} events={events} style={{ height: "640px" }} />
-    </div>
-  )
+    <ForceGraph3D
+      ref={fgRef}
+      graphData={createNodesAndEdges()}
+      nodeLabel="name"
+      nodeAutoColorBy="group"
+      onNodeClick={handleClick}
+    />
+  );
 }
