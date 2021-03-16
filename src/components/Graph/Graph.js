@@ -42,6 +42,8 @@ export default function Graph() {
   const [highlightNodes, setHighlightNodes] = useState(new Set());
   const [highlightLinks, setHighlightLinks] = useState(new Set());
   const [hoverNode, setHoverNode] = useState(null);
+  const [fromSearchTerm, setFromSearchTerm] = useState( { searchTerm: '', isValid: false } );
+  const [toSearchTerm, setToSearchTerm] = useState( { searchTerm: '', isValid: false } );
 
   const updateHighlight = () => {
     setHighlightNodes(highlightNodes);
@@ -55,6 +57,8 @@ export default function Graph() {
       highlightNodes.add(node);
       node.neighbors.forEach(neighbor => highlightNodes.add(neighbor));
       node.links.forEach(link => highlightLinks.add(link));
+    } else {
+      console.log("Hover leave")
     }
 
     setHoverNode(node || null);
@@ -78,21 +82,56 @@ export default function Graph() {
     // add ring just for highlighted nodes
     ctx.beginPath();
     ctx.arc(node.x, node.y, NODE_R * 1.4, 0, 2 * Math.PI, false);
-    ctx.fillStyle = node === hoverNode ? 'red' : 'orange';
+    ctx.fillStyle =
+      (node === hoverNode) ? 'red' : 'orange';
+    ctx.fillText(node.name, node.x + 6, node.y)
     ctx.fill();
   }, [hoverNode]);
+
+  const handleFromSearch = (e) => {
+    const searchTerm = e.target.value
+    setFromSearchTerm( { searchTerm: searchTerm, isValid: false })
+    const searchNode = data.nodes.filter(node => node.name.toLowerCase() === searchTerm.toLowerCase())
+    if (searchNode.length !== 0) {
+      highlightLinks.clear();
+      highlightNodes.clear();
+      highlightNodes.add(searchNode[0])
+      updateHighlight();
+    }
+  }
+
+  const handleToSearch = (e) => {
+    const searchTerm = e.target.value
+    setToSearchTerm( { searchTerm: searchTerm, isValid: false })
+    const searchNode = data.nodes.filter(node => node.name.toLowerCase() === searchTerm.toLowerCase())
+    if (searchNode.length !== 0) {
+      highlightLinks.clear()
+      highlightNodes.clear()
+      highlightNodes.add(searchNode[0])
+      updateHighlight()
+    }
+  }
+
   return (
-    <ForceGraph2D
-      graphData={data}
-      nodeLabel="name"
-      nodeRelSize={NODE_R}
-      linkWidth={link => highlightLinks.has(link) ? 5 : 1}
-      linkDirectionalParticles={4}
-      linkDirectionalParticleWidth={link => highlightLinks.has(link) ? 4 : 0}
-      nodeCanvasObjectMode={node => highlightNodes.has(node) ? 'before' : undefined}
-      nodeCanvasObject={paintRing}
-      onNodeHover={handleNodeHover}
-      onLinkHover={handleLinkHover}
-    />
+    <div>
+      <div style={{ textAlign: 'center' }}>
+        <br></br>
+        <input type='text' value={fromSearchTerm.searchTerm} onChange={handleFromSearch} placeholder='Search for a name!' />
+        <br></br>
+        <input type='text' value={toSearchTerm.searchTerm} onChange={handleToSearch} placeholder='Search for a name!' />
+      </div>
+      <ForceGraph2D
+        graphData={data}
+        nodeLabel={() => ''}
+        nodeRelSize={NODE_R}
+        linkWidth={link => highlightLinks.has(link) ? 5 : 1}
+        linkDirectionalParticles={4}
+        linkDirectionalParticleWidth={link => highlightLinks.has(link) ? 4 : 0}
+        nodeCanvasObjectMode={node => highlightNodes.has(node) ? 'before' : undefined}
+        nodeCanvasObject={paintRing}
+        onNodeHover={handleNodeHover}
+        onLinkHover={handleLinkHover}
+      />
+    </div>
   );
 }
