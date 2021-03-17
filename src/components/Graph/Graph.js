@@ -83,10 +83,12 @@ export default function Graph() {
     ctx.beginPath();
     ctx.arc(node.x, node.y, NODE_R * 1.4, 0, 2 * Math.PI, false);
     ctx.fillStyle =
-      (node === hoverNode) ? 'red' : 'orange';
+      (node === hoverNode
+        || fromSearchTerm.searchTerm.toLowerCase() === node.name.toLowerCase()
+        || toSearchTerm.searchTerm.toLowerCase() === node.name.toLowerCase()) ? 'red' : 'orange';
     ctx.fillText(node.name, node.x + 6, node.y)
     ctx.fill();
-  }, [hoverNode]);
+  }, [hoverNode, fromSearchTerm, toSearchTerm]);
 
   const handleFromSearch = (e) => {
     const searchTerm = e.target.value
@@ -94,7 +96,15 @@ export default function Graph() {
     const searchNode = data.nodes.filter(node => node.name.toLowerCase() === searchTerm.toLowerCase())
     if (searchNode.length !== 0) {
       highlightLinks.clear();
-      highlightNodes.clear();
+      let nodesToRemove = new Set()
+      highlightNodes.forEach(node => {
+        if (node.name.toLowerCase() !== toSearchTerm.searchTerm.toLowerCase()) {
+          nodesToRemove.add(node);
+        }
+      })
+      nodesToRemove.forEach(node => {
+        highlightNodes.delete(node)
+      })
       highlightNodes.add(searchNode[0])
       updateHighlight();
     }
@@ -106,7 +116,15 @@ export default function Graph() {
     const searchNode = data.nodes.filter(node => node.name.toLowerCase() === searchTerm.toLowerCase())
     if (searchNode.length !== 0) {
       highlightLinks.clear()
-      highlightNodes.clear()
+      let nodesToRemove = new Set()
+      highlightNodes.forEach(node => {
+        if (node.name.toLowerCase() !== fromSearchTerm.searchTerm.toLowerCase()) {
+          nodesToRemove.add(node);
+        }
+      })
+      nodesToRemove.forEach(node => {
+        highlightNodes.delete(node)
+      })
       highlightNodes.add(searchNode[0])
       updateHighlight()
     }
