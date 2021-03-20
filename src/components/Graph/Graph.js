@@ -1,11 +1,11 @@
 import React, { useState, useCallback, useMemo } from "react";
-import data from "../../data/data.json"
+import artistsData from "../../data/data.json"
 import ForceGraph2D from 'react-force-graph-2d';
 
 const createNodesAndEdges = () => {
   var nodes = []
   var links = []
-  data.all_artists.forEach(item => {
+  artistsData.all_artists.forEach(item => {
     nodes.push({ id: item.id, name: item.name, val: 1 })
     item.recommended.forEach(recommended => {
       links.push({ source: item.id, target: recommended })
@@ -92,9 +92,9 @@ export default function Graph() {
 
   const handleFromSearch = (e) => {
     const searchTerm = e.target.value
-    setFromSearchTerm( { searchTerm: searchTerm, isValid: false })
     const searchNode = data.nodes.filter(node => node.name.toLowerCase() === searchTerm.toLowerCase())
     if (searchNode.length !== 0) {
+      setFromSearchTerm( { searchTerm: searchTerm, isValid: true })
       highlightLinks.clear();
       let nodesToRemove = new Set()
       highlightNodes.forEach(node => {
@@ -106,8 +106,45 @@ export default function Graph() {
         highlightNodes.delete(node)
       })
       highlightNodes.add(searchNode[0])
-      updateHighlight();
+      if (toSearchTerm.isValid) {
+        getShortestPath(toSearchTerm.searchTerm, searchNode[0].name)
+      }
+      updateHighlight()
+    } else {
+      setFromSearchTerm( { searchTerm: searchTerm, isValid: false } )
     }
+  }
+
+  const getShortestPath = (from, to) => {
+    const fromId = data.nodes.filter(node => node.name.toLowerCase() === from.toLowerCase())[0].id
+    const toId = data.nodes.filter(node => node.name.toLowerCase() === to.toLowerCase())[0].id
+    const fromIndex = artistsData.index_id_map.filter(it => it.id === fromId)[0].index
+    const toIndex = artistsData.index_id_map.filter(it => it.id === toId)[0].index
+    const indexPath = getPath(fromIndex, toIndex, [])
+    highlightNodes.clear()
+    highlightLinks.clear()
+    var previousNode = null
+    indexPath.forEach(index => {
+      const id = artistsData.index_id_map.filter(it => it.index === index)[0].id
+      const pathNode = data.nodes.filter(node => node.id === id)[0]
+      highlightNodes.add(pathNode)
+      pathNode.links.forEach(link => {
+        if (previousNode != null && link.target.id === previousNode.id) {
+            highlightLinks.add(link)
+        }
+      });
+      previousNode = pathNode
+    })
+  }
+
+  const getPath = (i, j, path) => {
+    if (i === j) {
+      path.push(i)
+      return path
+    }
+    path.push(j)
+    path = getPath(i, artistsData.shortest_paths_matrix[i][j], path)
+    return path
   }
 
   const handleToSearch = (e) => {
@@ -115,6 +152,7 @@ export default function Graph() {
     setToSearchTerm( { searchTerm: searchTerm, isValid: false })
     const searchNode = data.nodes.filter(node => node.name.toLowerCase() === searchTerm.toLowerCase())
     if (searchNode.length !== 0) {
+      setToSearchTerm( { searchTerm: searchTerm, isValid: true })
       highlightLinks.clear()
       let nodesToRemove = new Set()
       highlightNodes.forEach(node => {
@@ -126,7 +164,12 @@ export default function Graph() {
         highlightNodes.delete(node)
       })
       highlightNodes.add(searchNode[0])
+      if (fromSearchTerm.isValid) {
+        getShortestPath(fromSearchTerm.searchTerm, searchNode[0].name)
+      }
       updateHighlight()
+    } else {
+      setToSearchTerm( { searchTerm: searchTerm, isValid: false } )
     }
   }
 
